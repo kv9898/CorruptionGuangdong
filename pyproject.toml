@@ -1,0 +1,9 @@
+[project]
+name = "corruptionguangdong"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "textract>=1.6.5",
+]

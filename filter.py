@@ -4,6 +4,7 @@ from pathlib import Path
 from docx import Document
 from multiprocessing import Pool, cpu_count
 from itertools import islice
+from tqdm import tqdm
 
 VERDICTS_OUTPUT_IR = Path(os.getcwd()) / "verdicts" / "docx"
 KEYWORDS = ["市委书记", "市长"]
@@ -15,10 +16,10 @@ def contains_keywords(docx_path: Path) -> str | None:
         doc = Document(docx_path)
         text = "\n".join(p.text for p in doc.paragraphs)
         if any(keyword in text for keyword in KEYWORDS):
-            print(f"✅ Match: {docx_path.name}")
+            tqdm.write(f"✅ Match: {docx_path.name}")
             return str(docx_path.name)
     except Exception as e:
-        print(f"❌ Failed to process {docx_path.name}: {e}")
+        tqdm.write(f"❌ Failed to process {docx_path.name}: {e}")
     return None
 
 def batched(iterable, size):
@@ -35,10 +36,12 @@ if __name__ == "__main__":
     num_processes = max(1, cpu_count() * 2 // 3)
     matching_files = []
 
-    for batch in batched(all_docx_files, BATCH_SIZE):
-        with Pool(processes=num_processes) as pool:
-            results = pool.map(contains_keywords, batch)
-        matching_files.extend(f for f in results if f is not None)
+    with tqdm(total=len(all_docx_files), desc="Filtering", unit="file") as pbar:
+        for batch in batched(all_docx_files, BATCH_SIZE):
+            with Pool(processes=num_processes) as pool:
+                results = pool.map(contains_keywords, batch)
+            matching_files.extend(f for f in results if f is not None)
+            pbar.update(len(batch))
 
     if matching_files:
         with open(MATCHING_LOG_PATH, "w", encoding="utf-8") as f:

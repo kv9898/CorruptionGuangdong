@@ -11,15 +11,14 @@ KEYWORDS = ["市委书记", "市长"]
 MATCHING_LOG_PATH = Path(os.getcwd()) / "matched_docx_files.json"
 BATCH_SIZE = 50  # Number of files per batch
 
-def contains_keywords(docx_path: Path) -> str | None:
+def contains_keywords(docx_path: Path) -> tuple[str, str] | None:
     try:
         doc = Document(docx_path)
         text = "\n".join(p.text for p in doc.paragraphs)
         if any(keyword in text for keyword in KEYWORDS):
-            tqdm.write(f"✅ Match: {docx_path.name}")
-            return str(docx_path.name)
+            return ("match", str(docx_path.name))
     except Exception as e:
-        tqdm.write(f"❌ Failed to process {docx_path.name}: {e}")
+        return ("error", f"{docx_path.name}: {e}")
     return None
 
 def batched(iterable, size):
@@ -40,7 +39,17 @@ if __name__ == "__main__":
         for batch in batched(all_docx_files, BATCH_SIZE):
             with Pool(processes=num_processes) as pool:
                 results = pool.map(contains_keywords, batch)
-            matching_files.extend(f for f in results if f is not None)
+
+            for r in results:
+                if r is None:
+                    continue
+                kind, content = r
+                if kind == "match":
+                    tqdm.write(f"✅ Match: {content}")
+                    matching_files.append(content)
+                elif kind == "error":
+                    tqdm.write(f"❌ Failed: {content}")
+
             pbar.update(len(batch))
 
     if matching_files:

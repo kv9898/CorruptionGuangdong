@@ -7,9 +7,12 @@ from itertools import islice
 from tqdm import tqdm
 
 VERDICTS_OUTPUT_DIR = Path(os.getcwd()) / "verdicts" / "docx"
-KEYWORDS = ["市委书记", "市长"]
 MATCHING_LOG_PATH = Path(os.getcwd()) / "matched_docx_files.json"
 BATCH_SIZE = 50  # Number of files per batch
+
+PREFECTURES: list[str] = json.load(open("prefectures.json", "r", encoding="utf-8"))
+POSITRONS: list[str] = ["委书记", "市长"]
+KEYWORDS: list[str] = [ p + pos for p in PREFECTURES for pos in POSITRONS ]
 
 def contains_keywords(docx_path: Path) -> tuple[str, str] | None:
     try:
@@ -21,6 +24,7 @@ def contains_keywords(docx_path: Path) -> tuple[str, str] | None:
         return ("error", f"{docx_path.name}: {e}")
     return None
 
+
 def batched(iterable, size):
     it = iter(iterable)
     while True:
@@ -29,8 +33,13 @@ def batched(iterable, size):
             break
         yield batch
 
+
 if __name__ == "__main__":
-    all_docx_files = [VERDICTS_OUTPUT_DIR / f for f in os.listdir(VERDICTS_OUTPUT_DIR) if f.lower().endswith(".docx")]
+    all_docx_files = [
+        VERDICTS_OUTPUT_DIR / f
+        for f in os.listdir(VERDICTS_OUTPUT_DIR)
+        if f.lower().endswith(".docx")
+    ]
 
     num_processes = max(1, cpu_count() * 2 // 3)
     matching_files = []
